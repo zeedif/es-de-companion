@@ -10,6 +10,28 @@ package com.esde.companion.data
 sealed class AppState {
 
     /**
+     * ES-DE is currently closed or the Companion has just launched
+     * and is waiting for an initial connection.
+     *
+     * Companion shows:
+     * - Waiting custom image (if provided by the user)
+     * - Solid black screen (default fallback)
+     * - No widgets
+     */
+    object WaitingForESDE : AppState()
+
+    /**
+     * ES-DE is currently booting up (has sent the startup event) but hasn't 
+     * reached the system selection menu yet.
+     *
+     * Companion shows:
+     * - Startup custom image (if provided by the user)
+     * - Falls back to pre-startup behavior if no startup image is set
+     * - No widgets
+     */
+    object ESDEStarting : AppState()
+
+    /**
      * User is browsing system selection in ES-DE.
      *
      * Companion shows:
@@ -107,6 +129,8 @@ sealed class SavedBrowsingState {
 
 fun AppState.getCurrentSystemName(): String? {
     return when (this) {
+        is AppState.WaitingForESDE -> null
+        is AppState.ESDEStarting -> null
         is AppState.SystemBrowsing -> systemName
         is AppState.GameBrowsing -> systemName
         is AppState.GamePlaying -> systemName
@@ -116,6 +140,8 @@ fun AppState.getCurrentSystemName(): String? {
 
 fun AppState.getCurrentGameFilename(): String? {
     return when (this) {
+        is AppState.WaitingForESDE -> null
+        is AppState.ESDEStarting -> null
         is AppState.GameBrowsing -> gameFilename
         is AppState.GamePlaying -> gameFilename
         is AppState.Screensaver -> currentGame?.gameFilename

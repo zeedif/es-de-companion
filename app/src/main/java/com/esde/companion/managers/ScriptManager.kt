@@ -21,7 +21,9 @@ object ScriptManager {
         "game-end",
         "screensaver-start",
         "screensaver-end",
-        "screensaver-game-select"
+        "screensaver-game-select",
+        "startup",
+        "quit"
     )
 
     // Old script filenames that should be deleted
@@ -88,7 +90,7 @@ object ScriptManager {
     }
 
     /**
-     * Write all 7 script files with the latest template
+     * Write all 9 script files with the latest template
      * Uses the improved POSIX-compatible syntax that handles embedded quotes
      */
     fun writeAllScriptFiles(scriptsDir: File) {
@@ -108,6 +110,8 @@ object ScriptManager {
         val screensaverGameFilenameLog = AppConstants.Paths.SCREENSAVER_GAME_FILENAME_LOG
         val screensaverGameNameLog = AppConstants.Paths.SCREENSAVER_GAME_NAME_LOG
         val screensaverGameSystemLog = AppConstants.Paths.SCREENSAVER_GAME_SYSTEM_LOG
+        val startupLog = AppConstants.Paths.STARTUP_LOG
+        val quitLog = AppConstants.Paths.QUIT_LOG
 
         // 1. Game select script
         val gameSelectScript = File(File(scriptsDir, "game-select"), AppConstants.Scripts.GAME_SELECT_SCRIPT)
@@ -297,10 +301,28 @@ else
 fi
 """)
         screensaverGameSelectScript.setExecutable(true)
+
+        // 8. Startup script
+        val startupScript = File(File(scriptsDir, "startup"), AppConstants.Scripts.STARTUP_SCRIPT)
+        startupScript.writeText("""#!/bin/sh
+LOG_DIR="$LOGS_PATH"
+mkdir -p "${'$'}LOG_DIR"
+printf 'startup' > "${'$'}LOG_DIR/$startupLog"
+""")
+        startupScript.setExecutable(true)
+
+        // 9. Quit script
+        val quitScript = File(File(scriptsDir, "quit"), AppConstants.Scripts.QUIT_SCRIPT)
+        quitScript.writeText("""#!/bin/sh
+LOG_DIR="$LOGS_PATH"
+mkdir -p "${'$'}LOG_DIR"
+printf 'quit' > "${'$'}LOG_DIR/$quitLog"
+""")
+        quitScript.setExecutable(true)
     }
 
     /**
-     * Check if all 7 scripts exist at the given path
+     * Check if all 9 scripts exist at the given path
      */
     fun findExistingScripts(scriptsDir: File): List<File> {
         val scriptFiles = listOf(
@@ -310,7 +332,9 @@ fi
             File(scriptsDir, "game-end/${AppConstants.Scripts.GAME_END_SCRIPT}"),
             File(scriptsDir, "screensaver-start/${AppConstants.Scripts.SCREENSAVER_START_SCRIPT}"),
             File(scriptsDir, "screensaver-end/${AppConstants.Scripts.SCREENSAVER_END_SCRIPT}"),
-            File(scriptsDir, "screensaver-game-select/${AppConstants.Scripts.SCREENSAVER_GAME_SELECT_SCRIPT}")
+            File(scriptsDir, "screensaver-game-select/${AppConstants.Scripts.SCREENSAVER_GAME_SELECT_SCRIPT}"),
+            File(scriptsDir, "startup/${AppConstants.Scripts.STARTUP_SCRIPT}"),
+            File(scriptsDir, "quit/${AppConstants.Scripts.QUIT_SCRIPT}")
         )
 
         return scriptFiles.filter { it.exists() }
@@ -328,15 +352,15 @@ fi
             // Delete old scripts
             val failedToDelete = deleteOldScriptFiles(scriptsDir)
 
-            // Write all 7 script files
+            // Write all 9 script files
             writeAllScriptFiles(scriptsDir)
 
             // Generate success message
             val message = when {
                 failedToDelete.isNotEmpty() ->
-                    "All 7 scripts created successfully!\n\nWarning: Could not delete old scripts: ${failedToDelete.joinToString()}"
+                    "All ${AppConstants.Scripts.TOTAL_SCRIPT_COUNT} scripts created successfully!\n\nWarning: Could not delete old scripts: ${failedToDelete.joinToString()}"
                 else ->
-                    "All 7 scripts created successfully!"
+                    "All ${AppConstants.Scripts.TOTAL_SCRIPT_COUNT} scripts created successfully!"
             }
 
             ScriptOperationResult(
@@ -370,7 +394,7 @@ fi
      * Check if all scripts exist and are up-to-date
      * This is a simple boolean check for quick validation
      *
-     * @return true if all 7 scripts exist with correct format
+     * @return true if all 9 scripts exist with correct format
      */
     fun areScriptsValid(scriptsDir: File): Boolean {
         val result = validateScripts(scriptsDir)
@@ -381,7 +405,7 @@ fi
      * Comprehensive script validation with detailed results
      *
      * Checks for:
-     * - All 7 scripts exist
+     * - All 9 scripts exist
      * - Scripts use new format (#!/bin/sh, printf '%s')
      * - Scripts have argument reconstruction logic
      * - Scripts don't use old format (#!/bin/bash, echo -n)
@@ -466,6 +490,24 @@ fi
                     AppConstants.Paths.SCREENSAVER_GAME_NAME_LOG,
                     AppConstants.Paths.SCREENSAVER_GAME_SYSTEM_LOG,
                     "if [ \"\$#\" -ge 4 ]"
+                ),
+                forbidden = listOf("echo -n", AppConstants.Scripts.OLD_SHEBANG)
+            ),
+            "startup/${AppConstants.Scripts.STARTUP_SCRIPT}" to ValidationPattern(
+                required = listOf(
+                    AppConstants.Scripts.EXPECTED_SHEBANG,
+                    "LOG_DIR=\"$LOGS_PATH\"",
+                    "printf 'startup'",
+                    AppConstants.Paths.STARTUP_LOG
+                ),
+                forbidden = listOf("echo -n", AppConstants.Scripts.OLD_SHEBANG)
+            ),
+            "quit/${AppConstants.Scripts.QUIT_SCRIPT}" to ValidationPattern(
+                required = listOf(
+                    AppConstants.Scripts.EXPECTED_SHEBANG,
+                    "LOG_DIR=\"$LOGS_PATH\"",
+                    "printf 'quit'",
+                    AppConstants.Paths.QUIT_LOG
                 ),
                 forbidden = listOf("echo -n", AppConstants.Scripts.OLD_SHEBANG)
             )

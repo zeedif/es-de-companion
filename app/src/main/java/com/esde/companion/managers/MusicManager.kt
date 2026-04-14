@@ -824,6 +824,10 @@ class MusicManager(
      */
     private fun shouldPlayMusicForState(state: AppState): Boolean {
         return when (state) {
+            is AppState.WaitingForESDE,
+            is AppState.ESDEStarting -> {
+                false // No music during startup/wait phases
+            }
             is AppState.SystemBrowsing -> {
                 prefsManager.musicSystemEnabled
             }
@@ -844,6 +848,10 @@ class MusicManager(
      */
     private fun getMusicSourceForState(state: AppState): MusicSource? {
         return when (state) {
+            is AppState.WaitingForESDE,
+            is AppState.ESDEStarting -> {
+                null // No music during startup/wait phases
+            }
             is AppState.SystemBrowsing -> {
                 if (state.systemName.isNotEmpty()) {
                     MusicSource.System(state.systemName)

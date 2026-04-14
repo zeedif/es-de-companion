@@ -127,7 +127,7 @@ class MainActivity : AppCompatActivity() {
     private var widgetMenuDialog: android.app.AlertDialog? = null
 
     // This tracks state alongside existing booleans during migration
-    private var state: AppState = AppState.SystemBrowsing("")
+    private var state: AppState = AppState.WaitingForESDE
         set(value) {
             val oldState = field
             field = value
@@ -292,7 +292,7 @@ class MainActivity : AppCompatActivity() {
                     android.util.Log.d("MainActivity", "Image preference changed in system view - reloading system image")
                     loadSystemImage()
                     skipNextReload = true
-                } else {
+                } else if (state is AppState.GameBrowsing) {
                     // In game browsing view - reload game image with new preference
                     android.util.Log.d("MainActivity", "Image preference changed in game view - reloading game image")
                     loadGameInfo()
@@ -302,7 +302,7 @@ class MainActivity : AppCompatActivity() {
                 // Custom background changed - reload to apply changes
                 if (state is AppState.SystemBrowsing) {
                     loadSystemImage()
-                } else if (state !is AppState.GamePlaying) {
+                } else if (state is AppState.GameBrowsing || state is AppState.WaitingForESDE || state is AppState.ESDEStarting) {
                     // Only reload if not playing - if playing, customBackgroundChanged won't affect display
                     loadGameInfo()
                 } else {
@@ -313,7 +313,7 @@ class MainActivity : AppCompatActivity() {
                 // Settings that affect displayed content changed - reload to apply changes
                 if (state is AppState.SystemBrowsing) {
                     loadSystemImage()
-                } else if (state !is AppState.GamePlaying) {
+                } else if (state is AppState.GameBrowsing) {
                     // Only reload if not playing - if playing, these settings don't affect game launch display
                     loadGameInfo()
                 } else {
@@ -597,27 +597,66 @@ class MainActivity : AppCompatActivity() {
 
         val systemScrollFile = File(logsDir, AppConstants.Paths.SYSTEM_NAME_LOG)
         val gameScrollFile = File(logsDir, AppConstants.Paths.GAME_FILENAME_LOG)
+        val startupFile = File(logsDir, AppConstants.Paths.STARTUP_LOG)
+        val quitFile = File(logsDir, AppConstants.Paths.QUIT_LOG)
 
         android.util.Log.d("MainActivity", "System scroll file: ${systemScrollFile.absolutePath}")
         android.util.Log.d("MainActivity", "System scroll file exists: ${systemScrollFile.exists()}")
         android.util.Log.d("MainActivity", "Game scroll file: ${gameScrollFile.absolutePath}")
         android.util.Log.d("MainActivity", "Game scroll file exists: ${gameScrollFile.exists()}")
+        android.util.Log.d("MainActivity", "Startup file: ${startupFile.absolutePath}")
+        android.util.Log.d("MainActivity", "Startup file exists: ${startupFile.exists()}")
+        android.util.Log.d("MainActivity", "Quit file: ${quitFile.absolutePath}")
+        android.util.Log.d("MainActivity", "Quit file exists: ${quitFile.exists()}")
 
-        // Check which file was modified most recently to determine which mode to use
-        val systemScrollExists = systemScrollFile.exists()
-        val gameScrollExists = gameScrollFile.exists()
+        val logFiles = mapOf(
+            "system" to systemScrollFile,
+            "game" to gameScrollFile,
+            "startup" to startupFile,
+            "quit" to quitFile
+        ).filter { it.value.exists() }
 
-        if (systemScrollExists && gameScrollExists) {
-            // Both exist, check which was modified last
-            if (systemScrollFile.lastModified() > gameScrollFile.lastModified()) {
-                loadSystemImage()
-            } else {
-                loadGameInfo()
-            }
-        } else if (systemScrollExists) {
-            loadSystemImage()
+        // Get the most recently modified log
+        val latestEntry = logFiles.maxByOrNull { it.value.lastModified() }
+
+        if (latestEntry == null) {
+            updateState(AppState.WaitingForESDE)
+            loadWaitingImage()
         } else {
-            loadGameInfo()
+            val latestLogType = latestEntry.key
+            val latestLogFile = latestEntry.value
+            val ageMs = System.currentTimeMillis() - latestLogFile.lastModified()
+
+            android.util.Log.d("MainActivity", "Most recent log: $latestLogType (Age: ${ageMs}ms)")
+
+            when {
+                latestLogType == "quit" -> {
+                    updateState(AppState.WaitingForESDE)
+                    loadWaitingImage()
+                }
+                latestLogType == "startup" && ageMs <= 1500 -> {
+                    updateState(AppState.ESDEStarting)
+                    loadStartupImage()
+                }
+                (latestLogType == "system" || latestLogType == "game") && ageMs <= 20000 -> {
+                    if (systemScrollFile.exists() && gameScrollFile.exists()) {
+                        if (systemScrollFile.lastModified() > gameScrollFile.lastModified()) {
+                            loadSystemImage()
+                        } else {
+                            loadGameInfo()
+                        }
+                    } else if (systemScrollFile.exists()) {
+                        loadSystemImage()
+                    } else {
+                        loadGameInfo()
+                    }
+                }
+                else -> {
+                    android.util.Log.d("MainActivity", "Logs are too old. Defaulting to Waiting.")
+                    updateState(AppState.WaitingForESDE)
+                    loadWaitingImage()
+                }
+            }
         }
 
         updateDimmingOverlay()
@@ -657,6 +696,61 @@ class MainActivity : AppCompatActivity() {
     private fun updateState(newState: AppState) {
         state = newState
         // Legacy variable sync removed - all functions now use state directly
+    }
+
+    private fun loadWaitingImage() {
+        android.util.Log.d("MainActivity", "State indeterminate/ES-DE closed. Loading waiting image...")
+        releasePlayer()
+        hideWidgets()
+        
+        val baseDir = File("${Environment.getExternalStorageDirectory()}/ES-DE Companion")
+        val extensions = listOf("webp", "png", "jpg", "jpeg", "gif")
+        var customImage: File? = null
+        
+        for (ext in extensions) {
+            val file = File(baseDir, "${AppConstants.Paths.WAITING_IMAGE_NAME}.$ext")
+            if (file.exists() && file.canRead()) {
+                customImage = file
+                break
+            }
+        }
+
+        if (customImage != null) {
+            loadImageWithAnimation(customImage, gameImageView)
+            gameImageView.visibility = View.VISIBLE
+        } else {
+            // Black screen fallback
+            Glide.with(this).clear(gameImageView)
+            gameImageView.setImageDrawable(null)
+            gameImageView.setBackgroundColor(android.graphics.Color.BLACK)
+            gameImageView.visibility = View.VISIBLE
+        }
+    }
+    
+    private fun loadStartupImage() {
+        android.util.Log.d("MainActivity", "ES-DE is starting. Loading startup image...")
+        releasePlayer()
+        hideWidgets()
+        
+        val baseDir = File("${Environment.getExternalStorageDirectory()}/ES-DE Companion")
+        val extensions = listOf("webp", "png", "jpg", "jpeg", "gif")
+        var customImage: File? = null
+        
+        for (ext in extensions) {
+            val file = File(baseDir, "${AppConstants.Paths.STARTUP_IMAGE_NAME}.$ext")
+            if (file.exists() && file.canRead()) {
+                customImage = file
+                break
+            }
+        }
+
+        if (customImage != null) {
+            loadImageWithAnimation(customImage, gameImageView)
+            gameImageView.visibility = View.VISIBLE
+        } else {
+            // Fallback to waiting behavior if no specific startup image is defined
+            loadWaitingImage()
+        }
     }
 
     private fun checkAndShowWidgetTutorialForUpdate() {
@@ -1014,6 +1108,7 @@ Access this help anytime from the widget menu!
             .setTitle("Script Update Available")
             .setMessage("Your ES-DE integration scripts need to be updated.\n\n" +
                     "Changes in this update:\n" +
+                    "• Added lifecycle support (startup, quit)\n" +
                     "• Fixes handling of game names with embedded quotes\n" +
                     "• Improved POSIX shell compatibility\n" +
                     "• Better special character handling\n" +
@@ -1171,10 +1266,12 @@ Access this help anytime from the widget menu!
                 android.util.Log.d("MainActivity", "Skipping reload - screensaver active")
             } else {
                 // Normal reload - this will reload both images and videos
-                if (state is AppState.SystemBrowsing) {
-                    loadSystemImage()
-                } else {
-                    loadGameInfo()  // This calls handleVideoForGame() internally
+                when(state) {
+                    is AppState.WaitingForESDE -> loadWaitingImage()
+                    is AppState.ESDEStarting -> loadStartupImage()
+                    is AppState.SystemBrowsing -> loadSystemImage()
+                    is AppState.GameBrowsing -> loadGameInfo()
+                    else -> {}
                 }
             }
         }
@@ -1935,7 +2032,9 @@ Access this help anytime from the widget menu!
                 if (path != null && (path == AppConstants.Paths.GAME_FILENAME_LOG || path == AppConstants.Paths.SYSTEM_NAME_LOG ||
                             path == AppConstants.Paths.GAME_START_FILENAME_LOG || path == AppConstants.Paths.GAME_END_FILENAME_LOG ||
                             path == AppConstants.Paths.SCREENSAVER_START_LOG || path == AppConstants.Paths.SCREENSAVER_END_LOG ||
-                            path == AppConstants.Paths.SCREENSAVER_GAME_FILENAME_LOG)) {
+                            path == AppConstants.Paths.SCREENSAVER_GAME_FILENAME_LOG ||
+                            path == AppConstants.Paths.STARTUP_LOG ||
+                            path == AppConstants.Paths.QUIT_LOG)) {
                     // Debounce: ignore events that happen too quickly
                     val currentTime = System.currentTimeMillis()
                     if (currentTime - lastEventTime < 50) {
@@ -1958,6 +2057,16 @@ Access this help anytime from the widget menu!
                             }
 
                             when (path) {
+                                AppConstants.Paths.STARTUP_LOG -> {
+                                    android.util.Log.d("MainActivity", "ES-DE Startup event detected")
+                                    updateState(AppState.ESDEStarting)
+                                    loadStartupImage()
+                                }
+                                AppConstants.Paths.QUIT_LOG -> {
+                                    android.util.Log.d("MainActivity", "ES-DE close event detected")
+                                    updateState(AppState.WaitingForESDE)
+                                    loadWaitingImage()
+                                }
                                 AppConstants.Paths.SYSTEM_NAME_LOG -> {
                                     // Ignore if launching from screensaver (game-select event between screensaver-end and game-start)
                                     if (isLaunchingFromScreensaver) {

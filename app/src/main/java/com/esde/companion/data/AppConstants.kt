@@ -69,6 +69,12 @@ object AppConstants {
         const val SCREENSAVER_GAME_FILENAME_LOG = "esde_screensavergameselect_filename.txt"
         const val SCREENSAVER_GAME_NAME_LOG = "esde_screensavergameselect_name.txt"
         const val SCREENSAVER_GAME_SYSTEM_LOG = "esde_screensavergameselect_system.txt"
+        const val STARTUP_LOG = "esde_startup.txt"
+        const val QUIT_LOG = "esde_quit.txt"
+
+        // Fallback image filenames
+        const val WAITING_IMAGE_NAME = "waiting_background"
+        const val STARTUP_IMAGE_NAME = "startup_background"
 
         // Media subdirectories
         const val MEDIA_FANART = "fanart"
@@ -208,7 +214,7 @@ object AppConstants {
      * Script validation requirements.
      */
     object Scripts {
-        const val TOTAL_SCRIPT_COUNT = 7
+        const val TOTAL_SCRIPT_COUNT = 9
         const val EXPECTED_SHEBANG = "#!/bin/sh"
         const val OLD_SHEBANG = "#!/bin/bash"          // Outdated format
 
@@ -220,6 +226,8 @@ object AppConstants {
         const val SCREENSAVER_START_SCRIPT = "esdecompanion-screensaver-start.sh"
         const val SCREENSAVER_END_SCRIPT = "esdecompanion-screensaver-end.sh"
         const val SCREENSAVER_GAME_SELECT_SCRIPT = "esdecompanion-screensaver-game-select.sh"
+        const val STARTUP_SCRIPT = "esdecompanion-startup.sh"
+        const val QUIT_SCRIPT = "esdecompanion-quit.sh"
     }
 
     // ========== SHARED PREFERENCES ==========
