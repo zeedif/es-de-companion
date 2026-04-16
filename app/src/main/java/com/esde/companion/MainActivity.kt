@@ -3366,37 +3366,34 @@ Access this help anytime from the widget menu!
         val appName = app.loadLabel(packageManager).toString()
 
         val dialogView = layoutInflater.inflate(R.layout.dialog_app_options, null)
-        val dialogAppName = dialogView.findViewById<TextView>(R.id.dialogAppName)
-        val btnAppInfo = dialogView.findViewById<MaterialButton>(R.id.btnAppInfo)
-        val btnHideApp = dialogView.findViewById<MaterialButton>(R.id.btnHideApp)
-        val chipGroup = dialogView.findViewById<ChipGroup>(R.id.launchPositionChipGroup)
-        val chipLaunchTop = dialogView.findViewById<Chip>(R.id.chipLaunchTop)
-        val chipLaunchBottom = dialogView.findViewById<Chip>(R.id.chipLaunchBottom)
-
-        dialogAppName.text = appName
+        val btnLaunchThis = dialogView.findViewById<TextView>(R.id.btnLaunchThisScreen)
+        val btnLaunchOther = dialogView.findViewById<TextView>(R.id.btnLaunchOtherScreen)
+        val btnAppInfo = dialogView.findViewById<TextView>(R.id.btnAppInfo)
+        val btnHideApp = dialogView.findViewById<TextView>(R.id.btnHideApp)
 
         // Check if app is currently hidden and update button
         val hiddenApps = prefsManager.hiddenApps.toMutableSet()
         val isHidden = hiddenApps.contains(packageName)
 
         if (isHidden) {
-            btnHideApp.text = "Unhide App"
-            btnHideApp.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                android.graphics.Color.parseColor("#4CAF50")
-            )
+            btnHideApp.text = "Unhide app"
+            val color = android.graphics.Color.parseColor("#4CAF50")
+            btnHideApp.setTextColor(color)
+            btnHideApp.compoundDrawables[0]?.setTint(color)
         } else {
-            btnHideApp.text = "Hide App"
-            btnHideApp.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                android.graphics.Color.parseColor("#CF6679")
-            )
+            btnHideApp.text = "Hide app"
+            val color = android.graphics.Color.parseColor("#CF6679")
+            btnHideApp.setTextColor(color)
+            btnHideApp.compoundDrawables[0]?.setTint(color)
         }
 
-        // Set initial chip state
+        // Highlight current default launch position by changing text color
         val currentPosition = appLaunchPrefs.getLaunchPosition(packageName)
+        val activeColor = android.graphics.Color.parseColor("#BB86FC")
         if (currentPosition == AppLaunchManager.POSITION_TOP) {
-            chipLaunchTop.isChecked = true
+            btnLaunchThis.setTextColor(activeColor)
         } else {
-            chipLaunchBottom.isChecked = true
+            btnLaunchOther.setTextColor(activeColor)
         }
 
         val dialog = AlertDialog.Builder(this)
@@ -3455,42 +3452,41 @@ Access this help anytime from the widget menu!
             }
         }
 
-        // Chip selection listener - save preference AND launch app
-        chipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
-            if (checkedIds.isEmpty()) return@setOnCheckedStateChangeListener
+        // Launch position listeners - save preference AND launch app
+        btnLaunchThis.setOnClickListener {
+            // Save preference
+            appLaunchPrefs.setLaunchPosition(packageName, AppLaunchManager.POSITION_TOP)
+            android.util.Log.d("MainActivity", "Set $appName to launch on THIS screen")
 
-            when {
-                checkedIds.contains(R.id.chipLaunchTop) -> {
-                    // Save preference
-                    appLaunchPrefs.setLaunchPosition(packageName, AppLaunchManager.POSITION_TOP)
-                    android.util.Log.d("MainActivity", "Set $appName to launch on THIS screen")
+            // Launch the app
+            launchApp(app)
 
-                    // Launch the app
-                    launchApp(app)
-
-                    // Close dialog and drawer
-                    dialog.dismiss()
-                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-
-                    // Refresh indicators
-                    (appRecyclerView.adapter as? AppAdapter)?.refreshIndicators()
-                }
-                checkedIds.contains(R.id.chipLaunchBottom) -> {
-                    // Save preference
-                    appLaunchPrefs.setLaunchPosition(packageName, AppLaunchManager.POSITION_BOTTOM)
-                    android.util.Log.d("MainActivity", "Set $appName to launch on OTHER screen")
-
-                    // Launch the app
-                    launchApp(app)
-
-                    // Close dialog and drawer
-                    dialog.dismiss()
-                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
-
-                    // Refresh indicators
-                    (appRecyclerView.adapter as? AppAdapter)?.refreshIndicators()
-                }
+            // Close dialog and drawer
+            dialog.dismiss()
+            if (::bottomSheetBehavior.isInitialized) {
+                bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
             }
+
+            // Refresh indicators
+            (appRecyclerView.adapter as? AppAdapter)?.refreshIndicators()
+        }
+
+        btnLaunchOther.setOnClickListener {
+            // Save preference
+            appLaunchPrefs.setLaunchPosition(packageName, AppLaunchManager.POSITION_BOTTOM)
+            android.util.Log.d("MainActivity", "Set $appName to launch on OTHER screen")
+
+            // Launch the app
+            launchApp(app)
+
+            // Close dialog and drawer
+            dialog.dismiss()
+            if (::bottomSheetBehavior.isInitialized) {
+                bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
+            }
+
+            // Refresh indicators
+            (appRecyclerView.adapter as? AppAdapter)?.refreshIndicators()
         }
 
         dialog.show()

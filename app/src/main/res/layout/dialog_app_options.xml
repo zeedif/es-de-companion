@@ -1,111 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp"
-    android:background="#1A1A1A">
+    android:background="#252525">
 
-    <!-- App Name as Header -->
+    <!-- Launch Options -->
     <TextView
-        android:id="@+id/dialogAppName"
+        android:id="@+id/btnLaunchThisScreen"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:text="Launch on this screen"
         android:textColor="#FFFFFF"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="24dp" />
+        android:textSize="16sp"
+        android:padding="16dp"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true" />
 
-    <!-- Divider -->
+    <TextView
+        android:id="@+id/btnLaunchOtherScreen"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Launch on other screen"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:padding="16dp"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true" />
+
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#333333"
-        android:layout_marginBottom="20dp" />
-
-    <!-- Launch Position Section -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Launch Position"
-        android:textColor="#FFFFFF"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp" />
 
     <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Tap to launch app on chosen display"
-        android:textColor="#999999"
-        android:textSize="14sp"
-        android:layout_marginBottom="12dp" />
-
-    <!-- Chip Group for Toggle Buttons -->
-    <com.google.android.material.chip.ChipGroup
-        android:id="@+id/launchPositionChipGroup"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
-        app:singleSelection="true"
-        app:selectionRequired="true">
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipLaunchTop"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="This screen"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:checkable="true"
-            app:chipBackgroundColor="@color/chip_background_selector_dialog"
-            app:chipStrokeColor="#BB86FC"
-            app:chipStrokeWidth="2dp"
-            android:minHeight="48dp" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipLaunchBottom"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Other screen"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
-            android:checkable="true"
-            android:checked="true"
-            app:chipBackgroundColor="@color/chip_background_selector_dialog"
-            app:chipStrokeColor="#BB86FC"
-            app:chipStrokeWidth="2dp"
-            android:minHeight="48dp" />
-
-    </com.google.android.material.chip.ChipGroup>
-
-    <!-- Divider -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="#333333"
-        android:layout_marginBottom="20dp" />
-
-    <!-- App Info Button -->
-    <Button
         android:id="@+id/btnAppInfo"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:text="Open App Info"
+        android:layout_height="wrap_content"
+        android:text="App info"
         android:textColor="#FFFFFF"
         android:textSize="16sp"
-        android:backgroundTint="#BB86FC"
-        android:layout_marginBottom="12dp" />
+        android:padding="16dp"
+        android:gravity="center_vertical"
+        android:drawableStart="@android:drawable/ic_menu_info_details"
+        android:drawablePadding="12dp"
+        android:drawableTint="#FFFFFF"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true" />
 
-    <!-- Hide App Button -->
-    <Button
+    <TextView
         android:id="@+id/btnHideApp"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:text="Hide App"
-        android:textColor="#FFFFFF"
+        android:layout_height="wrap_content"
+        android:text="Hide app"
+        android:textColor="#CF6679"
         android:textSize="16sp"
-        android:backgroundTint="#CF6679" />
+        android:padding="16dp"
+        android:gravity="center_vertical"
+        android:drawableStart="@android:drawable/ic_menu_view"
+        android:drawablePadding="12dp"
+        android:drawableTint="#CF6679"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true" />
 
 </LinearLayout>
